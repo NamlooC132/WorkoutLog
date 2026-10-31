@@ -1,0 +1,76 @@
+# Cloud builds on Codemagic's Macs – lets you build the app without owning a Mac.
+#
+# Two workflows:
+#   1. "Check it compiles"  – FREE, no Apple account needed. Builds the app and
+#      produces an unsigned WorkoutLog-unsigned.ipa (usable with Sideloadly).
+#   2. "TestFlight release" – needs the paid Apple Developer Program. Signs the app
+#      and uploads it to App Store Connect / TestFlight.
+#
+# The ONLY line you normally need to edit is BUNDLE_ID in workflow 2
+# (and the integration name if you named your API key something else).
+
+workflows:
+
+  compile-check:
+    name: 1 · Check it compiles (free)
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+    scripts:
+      - name: Build for iPhone without signing
+        script: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild \
+            -project WorkoutLog.xcodeproj \
+            -scheme WorkoutLog \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/dd \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tee build/xcodebuild.log
+      - name: Package unsigned .ipa
+        script: |
+          mkdir -p Payload
+          cp -R build/dd/Build/Products/Release-iphoneos/WorkoutLog.app Payload/
+          zip -qr WorkoutLog-unsigned.ipa Payload
+    artifacts:
+      - WorkoutLog-unsigned.ipa
+      - build/xcodebuild.log
+
+  testflight:
+    name: 2 · TestFlight release
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    integrations:
+      app_store_connect: Codemagic API key   # the name you gave the key in Codemagic
+    environment:
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.CHANGE-ME.workoutlog
+      vars:
+        BUNDLE_ID: com.CHANGE-ME.workoutlog  # ← must match the line above and your App Store Connect app
+    scripts:
+      - name: Use your bundle ID and a fresh build number
+        script: |
+          sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*;/PRODUCT_BUNDLE_IDENTIFIER = \"$BUNDLE_ID\";/" WorkoutLog.xcodeproj/project.pbxproj
+          sed -i '' "s/CURRENT_PROJECT_VERSION = .*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/" WorkoutLog.xcodeproj/project.pbxproj
+      - name: Apply signing profiles
+        script: xcode-project use-profiles
+      - name: Build signed .ipa
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/WorkoutLog.xcodeproj" \
+            --scheme "WorkoutLog"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # false = available to you (internal testers) as soon as Apple finishes processing.
+        # Set to true later to send builds to external testers (friends via public link).
+        submit_to_testflight: false
