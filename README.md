@@ -43,7 +43,7 @@ WorkoutLog/
     │   └── Components/ NumberInputField, ExerciseThumbnail, ResumeWorkoutBar,
     │                   CameraPicker, ActivityView (share sheet)
     ├── Utilities/      WeightUnit (+ RestTime), AppSettings, Formatters, Haptics, KeyboardHelpers
-    └── Assets.xcassets AppIcon (1024 px, included) + AccentColor (blue, light/dark)
+    └── Assets.xcassets AppIcon (1024 px, included) + AccentColor (orange, light/dark)
 ```
 
 ### Key design decisions
@@ -163,7 +163,7 @@ Tip: run on a real phone for the timer, sound, vibration and camera.
 **Never lose a workout**
 1. Start a workout, log two sets, then **swipe the app away** in the app switcher.
 2. Reopen → the workout comes back exactly as it was (timer too, if still running).
-3. Tap the **⌄** button (top left) → *Minimize*: a blue "Workout in progress" bar appears at the top of every tab; tap it to return.
+3. Tap the **⌄** button (top left) → *Minimize*: an orange "Workout in progress" bar appears at the top of every tab; tap it to return.
 
 **History & progress**
 1. **History** tab → workouts grouped by month → tap one for details.
